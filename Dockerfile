@@ -5,11 +5,13 @@ FROM golang:1.23 AS builder
 
 WORKDIR /app
 
+# 拷贝依赖文件并下载
 COPY go.mod go.sum ./
 RUN go mod download
 
+# 拷贝源码并编译
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o usad-wallet-manager
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o usad-wallet-manager ./cmd/service
 
 # =========================
 # 2. 运行阶段
@@ -21,5 +23,8 @@ WORKDIR /app
 # 拷贝二进制文件
 COPY --from=builder /app/usad-wallet-manager .
 
-EXPOSE 10832
+# 拷贝 contracts 目录
+COPY --from=builder /app/contracts ./contracts
+
+EXPOSE 8080
 CMD ["./usad-wallet-manager"]
