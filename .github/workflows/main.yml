@@ -9,7 +9,6 @@ env:
   DOCKER_IMAGE_NAME: com.beggar/wallet  # Docker 镜像名称
   DOCKER_IMAGE_TAG: 1.0.0               # 镜像标签
   TAR_FILE: usad-wallet-manager.tar     # 导出的 TAR 文件名
-  BINARY_NAME: usad-wallet-manager      # Go 编译后的二进制文件名
 
 jobs:
   build-and-deploy:
@@ -19,35 +18,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 设置 Go 环境（Go 1.21）
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-
-      # 3. 编译 Go 项目
-      - name: Build Go Binary
-        run: |
-          go mod tidy
-          go build -o $BINARY_NAME
-
-      # 4. 构建 Docker 镜像
+      # 2. 构建 Docker 镜像（在容器里编译 Go）
       - name: Build Docker Image
         run: |
           docker build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG .
 
-      # 5. 导出镜像为 TAR 文件
+      # 3. 导出镜像为 TAR 文件
       - name: Save Docker image as TAR
         run: docker save $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG > $TAR_FILE
 
-      # 6.1. 将 PEM 密钥写入文件
+      # 4.1. 将 PEM 密钥写入文件
       - name: Create SSH Key File
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/key.pem
           chmod 600 ~/.ssh/key.pem
       
-      # 6.2. 通过 SCP 传输文件
+      # 4.2. 通过 SCP 传输文件
       - name: Upload Files via SCP
         run: |
           scp -o StrictHostKeyChecking=no \
@@ -55,7 +42,7 @@ jobs:
               ./$TAR_FILE \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
 
-      # 6.3. 重启服务
+      # 4.3. 重启服务
       - name: Run Remote Commands
         run: |
           ssh -o StrictHostKeyChecking=no \
@@ -69,7 +56,7 @@ jobs:
           sudo docker image prune -f
           EOF
       
-      # 7. 成功后发送 Lark 通知
+      # 5. 成功后发送 Lark 通知
       - name: Notify Lark on Success
         if: success()
         uses: actions/github-script@v7
