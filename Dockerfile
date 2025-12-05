@@ -20,6 +20,9 @@ FROM debian:bullseye-slim
 
 WORKDIR /app
 
+# 安装 CA 根证书
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # 拷贝二进制文件
 COPY --from=builder /app/usad-wallet-manager .
 
